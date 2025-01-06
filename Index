@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2 Cents Podcast - Video Gallery</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .video-container {
+      margin-top: 20px;
+    }
+    .video-card {
+      margin-bottom: 20px;
+    }
+    iframe {
+      width: 100%;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <h1 class="text-center">2 Cents Podcast - Video Gallery</h1>
+    <div class="form-group mt-4">
+      <input type="text" id="searchInput" class="form-control" placeholder="Search videos..." oninput="searchVideos()">
+    </div>
+    <div id="videoGallery" class="row video-container">
+      <!-- Videos will be dynamically inserted here -->
+    </div>
+  </div>
+
+  <script>
+    const RSS_FEED_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UC-KzFzWUFrQoZ3hX6NNgo-Q";
+    let videos = [];
+
+    // Fetch and parse the RSS feed
+    async function fetchRSSFeed() {
+      try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(RSS_FEED_URL)}`);
+        const data = await response.json();
+
+        // Debugging: Log the response
+        console.log("Fetched Data:", data);
+
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(data.contents, "text/xml");
+        parseVideos(xml);
+      } catch (error) {
+        console.error("Error fetching RSS feed:", error);
+
+        // Alternative: Try another proxy if AllOrigins fails
+        try {
+          const responseAlt = await fetch(`https://corsproxy.io/?${encodeURIComponent(RSS_FEED_URL)}`);
+          const dataAlt = await responseAlt.text();
+          const parserAlt = new DOMParser();
+          const xmlAlt = parserAlt.parseFromString(dataAlt, "text/xml");
+          parseVideos(xmlAlt);
+        } catch (altError) {
+          console.error("Alternative proxy also failed:", altError);
+        }
+      }
+    }
+
+    // Parse videos from the RSS feed
+    function parseVideos(xml) {
+      const items = xml.querySelectorAll("entry");
+      items.forEach((item) => {
+        const title = item.querySelector("title").textContent;
+        const videoId = item.querySelector("yt\\:videoId").textContent;
+        const link = `https://www.youtube.com/watch?v=${videoId}`;
+        videos.push({ title, videoId, link });
+      });
+
+      // Debugging: Log parsed videos
+      console.log("Parsed Videos:", videos);
+
+      displayVideos(videos);
+    }
+
+    // Display videos in the gallery
+    function displayVideos(videoList) {
+      const gallery = document.getElementById("videoGallery");
+      gallery.innerHTML = ""; // Clear previous videos
+
+      videoList.forEach((video) => {
+        const videoCard = `
+          <div class="col-md-4 video-card">
+            <div class="card shadow">
+              <iframe src="https://www.youtube.com/embed/${video.videoId}" frameborder="0" allowfullscreen></iframe>
+              <div class="card-body">
+                <h5 class="card-title">${video.title}</h5>
+                <a href="${video.link}" target="_blank" class="btn btn-primary btn-block">Watch on YouTube</a>
+              </div>
+            </div>
+          </div>
+        `;
+        gallery.innerHTML += videoCard;
+      });
+    }
+
+    // Search videos by title
+    function searchVideos() {
+      const query = document.getElementById("searchInput").value.toLowerCase();
+      const filteredVideos = videos.filter((video) =>
+        video.title.toLowerCase().includes(query)
+      );
+      displayVideos(filteredVideos);
+    }
+
+    // Fetch videos on page load
+    fetchRSSFeed();
+  </script>
+</body>
+</html>
